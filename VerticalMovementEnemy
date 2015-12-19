@@ -1,0 +1,35 @@
+using UnityEngine;
+using System.Collections;
+
+public class VerticalMovementEnemy : MonoBehaviour {
+
+	Rigidbody2D rb;
+	public float verticalHeight;
+
+	public bool isPiped;
+	public LayerMask isGroundLayer;
+	public Transform pipeCheck;
+
+	// Use this for initialization
+	void Start () {
+	
+		rb = GetComponent<Rigidbody2D>();
+
+		if (!rb)
+			Debug.Log("Need Rigidbody2d on Enemy.");
+
+	}//End of Start
+	
+	// Update is called once per frame
+	void Update () {
+
+		isPiped = Physics2D.OverlapCircle(pipeCheck.position, 0.2f,isGroundLayer);
+
+		if (isPiped)
+			rb.AddForce(Vector2.up*verticalHeight,ForceMode2D.Impulse);
+
+
+			rb.AddForce(Vector2.down*verticalHeight,ForceMode2D.Impulse);
+
+	}//End of Update
+}
