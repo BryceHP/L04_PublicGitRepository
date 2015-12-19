@@ -1,0 +1,115 @@
+using UnityEngine;
+using System.Collections;
+
+public class RangedEnemy : MonoBehaviour {
+    public Projectile projectilePrefab; //Used to store image that'll be fired
+    public Transform projectileSpawnPoint; //Used to create a play the projectiles will come from
+    public float projectileSpeed; //Used to determine how fast projectile will travel
+
+    public bool isFacingRight;
+
+    public GameObject target;
+
+    //Time based firing variables
+    public float fireRate;
+    float timeSinceLastFire = 0;
+
+    //public int lives;
+
+    // Use this for initialization
+    void Start()
+    {
+
+        if (projectileSpeed == 0)
+            projectileSpeed = 1;
+
+        if (!target)
+            target = GameObject.FindWithTag("Player");
+
+        if (fireRate == 0)
+            fireRate = 1.0f;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+        float distanceToTarget = Vector2.Distance(target.transform.position, projectileSpawnPoint.transform.position);
+        Debug.Log("Distance Remaining: " + distanceToTarget);
+
+        //Check if enough time has passed since projectile was last fired
+        if (Time.time > timeSinceLastFire + fireRate && distanceToTarget < 1.5) //Time passed has to be greater then the last time the projectile was fired + fire rate
+        {
+            //Create and fire projectile
+            fireProjectile();
+
+            //Timestamp when projectile was fired
+            timeSinceLastFire = Time.time;
+        }
+
+        //if (target.transform.position.x > projectileSpawnPoint.transform.position.x)
+       // {
+            if (!isFacingRight)
+            {
+                flip();
+            }
+       // }
+        //else if (target.transform.position.x <= projectileSpawnPoint.transform.position.x)
+        //{
+            if (isFacingRight)
+            {
+                flip();
+            }
+       // }
+
+    }//End of Update
+
+    void fireProjectile()
+    {
+        Projectile temp = Instantiate(projectilePrefab, projectileSpawnPoint.position, projectileSpawnPoint.rotation) as Projectile;
+
+        //shoots right when facing right
+        if (isFacingRight)
+            temp.GetComponent<Rigidbody2D>().velocity = new Vector2(projectileSpeed, 0);
+
+        //shoots left when facing left
+        else
+            temp.GetComponent<Rigidbody2D>().velocity = new Vector2(-projectileSpeed, 0);
+
+        //less if statements the better, can use else since there's only 2 directions
+        //else if (!isFacingRight)
+        //temp.GetComponent<Rigidbody2D>().velocity = new Vector2 (-ProjectileSpeed,0);
+    }
+
+    void flip()
+    {
+        //Toggle variable
+        isFacingRight = !isFacingRight;
+
+        //Make a copy of current character scale, it's Vector3 becuase in Unity scale has 3 coordinates, (x,y,z) therefore 3D vector
+        Vector3 scaleFactor = transform.localScale;
+
+        //flip horizontal scale, x is horizontal changes
+        scaleFactor.x *= -1; //Changes scale to (-1,1,1) since it interacts with x's scale
+
+        //Updates scale of character
+        transform.localScale = scaleFactor;
+    }
+    void OnCollisionEnter2D(Collision2D c)
+    {
+        /*if (c.gameObject.tag == "Enemy_FiveHit")
+        {
+            if (lives > 0)
+            {
+                lives--;
+                Debug.Log("Lives:" + lives);
+                Destroy(c.gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+                Destroy(c.gameObject);
+            }
+        }*/
+    }
+}
