@@ -1,0 +1,45 @@
+using UnityEngine;
+using System.Collections;
+
+public class Level1 : MonoBehaviour {
+	
+	public GameObject player;
+	public GameObject[] enemyPrefabs;
+	public GameObject[] enemySpawnPoints;
+	public GameObject[] powerUpPrefabs;
+	public GameObject[] powerUpSpawnPoints;
+	public GameObject playerSpawnPoint;
+	
+	// Use this for initialization
+	void Start () {
+		enemySpawnPoints = GameObject.FindGameObjectsWithTag("Enemy_SpawnPoint");
+		powerUpSpawnPoints = GameObject.FindGameObjectsWithTag("PowerUp_SpawnPoint");
+		
+		Instantiate(player, playerSpawnPoint.transform.position, playerSpawnPoint.transform.rotation);
+		
+		for(int i = 0; i < enemySpawnPoints.Length; i++)
+		{
+			if(Random.Range(0,5) < 2.5f)
+				Instantiate(enemyPrefabs[0], enemySpawnPoints[i].transform.position, enemySpawnPoints[i].transform.rotation);
+			else
+				Instantiate(enemyPrefabs[1], enemySpawnPoints[i].transform.position, enemySpawnPoints[i].transform.rotation);
+		}
+		
+		
+		for (int i = 0; i < powerUpSpawnPoints.Length; i++)
+		{
+			if (Random.Range(0, 5) < 2.5f)
+				Instantiate(powerUpPrefabs[0], powerUpSpawnPoints[i].transform.position, powerUpSpawnPoints[i].transform.rotation);
+			else
+				Instantiate(powerUpPrefabs[1], powerUpSpawnPoints[i].transform.position, powerUpSpawnPoints[i].transform.rotation);
+		}
+		
+		//Call to GameManager Scipt
+		GameManager.instance.StartLevel();
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+}
