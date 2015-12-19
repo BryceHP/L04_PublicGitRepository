@@ -1,0 +1,190 @@
+using UnityEngine;
+using System.Collections;
+using UnityEngine.UI;
+
+public class GameManager : MonoBehaviour {
+	
+	public GameObject foundLife;
+	//public GameObject foundHealth;    variable to store Health GameObject value
+	public int howManyLifes;
+	//public GameObject[] allLifes;
+	
+	public GameObject player;
+	public GameObject finishLine;
+	
+	//array of Objects
+	public GameObject[] spawnPoints;
+	
+	public GameObject[] allCollect;
+	
+	int chosenCollect;
+	
+	public Transform itemSpawnPoint;
+	
+	public GameObject life;
+	public GameObject health;
+	
+	static GameManager _instance = null;
+	
+	public Canvas titleCanvas;
+	public Canvas pauseCanvas;
+	public Canvas hudCanvas;
+	
+	public Button quitButton;
+	
+	public Text scoreText;
+	
+	int score;
+	
+	public Text lifeText;
+	
+	int lives=4;
+	
+	// Use this for initialization
+	void Start () 
+	{
+		
+		//If GameManager does not exist
+		if (!_instance)
+		{
+			//keeps game object alive in scene switch
+			DontDestroyOnLoad(gameObject);
+			
+			//Keeps a reference to Gameobject
+			_instance = this;
+			
+			quitButton.onClick.AddListener(QuitGame);
+		}
+		else 
+			Destroy(gameObject);
+		
+		titleCanvas.enabled = true;
+		pauseCanvas.enabled = false;
+		hudCanvas.enabled = false;
+		
+	}//END OF Start()
+	
+	// Update is called once per frame
+	void Update () {
+		
+		//check if enter was pressed
+		if (Input.GetKeyDown(KeyCode.Return))
+		{
+			//Switch the Scene to Game Scene
+			StartGame();
+		}
+		
+		//For going back to The Pause Menu
+		if (Input.GetKeyDown(KeyCode.Escape) && Application.loadedLevelName !="Screen_Title")
+		{
+			titleCanvas.enabled = false;
+			pauseCanvas.enabled = true;
+			hudCanvas.enabled = true;
+			Time.timeScale = 0;
+		}
+		
+		//For quitting the Game
+		if (Input.GetKeyDown(KeyCode.Escape) && Application.loadedLevelName == "Screen_Title")
+		{
+			QuitGame();
+		}
+		
+	}//END OF Update()
+	
+	public void StartLevel()
+	{
+		//Goes through hierarchy to find the name of an object
+		foundLife = GameObject.Find("1up");
+		
+		//searches for GameObject named "Health"
+		//foundHealth = GameObject.Find("Health");
+		
+		//Goes through hierarchy to find the tag of an object
+		foundLife = GameObject.FindWithTag("Collectible");
+		
+		//allLifes = GameObject.FindGameObjectsWithTag("Collectible");
+		howManyLifes = GameObject.FindGameObjectsWithTag("Collectible").Length;
+		
+		allCollect = GameObject.FindGameObjectsWithTag("Collectible");
+		
+		//fills spawnPoints array with GameObjects that have "Collectible"
+		spawnPoints = GameObject.FindGameObjectsWithTag("spawnPoints");
+		
+		for (int i = 0; i < spawnPoints.Length; i++)
+		{
+			chosenCollect = Random.Range(0, 10);
+			if (chosenCollect < 5)
+			{
+				spawnPoints[i] = allCollect[0];
+				allCollect[0].GetComponent<SpriteRenderer>().sortingLayerName = "Collectables";
+				
+				Instantiate(health, itemSpawnPoint.position, itemSpawnPoint.rotation);
+			}
+			else
+			{
+				spawnPoints[i] = allCollect[1];
+				allCollect[1].GetComponent<SpriteRenderer>().sortingLayerName = "Collectables";
+				
+				Instantiate(life, itemSpawnPoint.position, itemSpawnPoint.rotation);
+			}
+		}
+	}//End of StartLevel()
+	
+	void DistanceCheck()
+	{
+		//can be used not only to let you know when you are getting close to the finsish line, but it could also be used for enemy AI, attacking after a while, play music at a certain point, etc
+		float distanceToFinish = Vector2.Distance(player.transform.position, finishLine.transform.position);
+		Debug.Log("Distance Remaining: " + distanceToFinish);
+		
+	}
+	
+	public static GameManager instance
+	{
+		get {return _instance;}
+		set { _instance = value; }
+	}
+	
+	public void StartGame()
+	{
+		titleCanvas.enabled = false;
+		pauseCanvas.enabled = false;
+		hudCanvas.enabled = true;
+		
+		Application.LoadLevel("Level1");
+	}
+	
+	public void QuitGame()
+	{
+		Debug.Log("Quitting...");
+		Application.Quit();
+	}
+	
+	public void UpdateScore(int score)
+	{
+		//Change score by passed value
+		this.score += score;
+		
+		//Convert score variable to string and update UI.Text on screen
+		scoreText.text = this.score.ToString();
+	}
+	
+	public void UpdateLives(int lives)
+	{
+		//Change lives by passed value
+		this.lives -= lives;
+		
+		//Convert score variable to string and update UI.Text on screen
+		lifeText.text = this.lives.ToString();
+	}
+	
+	public void UnPauseGame()
+	{
+		titleCanvas.enabled = false;
+		pauseCanvas.enabled = false;
+		hudCanvas.enabled = true;
+		Time.timeScale = 1;
+		
+		//Application.LoadLevel("Level1");
+	}
+	
+}
