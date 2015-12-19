@@ -1,0 +1,18 @@
+using UnityEngine;
+using System.Collections;
+
+public class ExtraLife : MonoBehaviour {
+	
+	int life=1;
+	
+	// Use this for initialization
+	void Start () {
+		
+	}//END OF Start()
+	
+	public int AddLife () {
+		
+		return life;
+		
+	}//END OF AddLife()
+}
