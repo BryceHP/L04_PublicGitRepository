@@ -1,0 +1,118 @@
+using UnityEngine;
+using System.Collections;
+
+public class CharacterController_Movement : MonoBehaviour {
+	
+	Rigidbody2D rb;
+	
+	public float speed;
+	
+	//for jumping
+	public float jumpForce;
+	public bool isGrounded;
+	public LayerMask isGroundLayer;
+	public Transform groundCheck;
+	
+	//public bool isSlide=false;
+	
+	//public bool isFire=false;
+	
+	public Animator anim; //Calls the animator
+	
+	//for flipping character
+	public bool isFacingRight; 
+	
+	// Use this for initialization
+	void Start () {
+		
+		rb = GetComponent<Rigidbody2D>();
+		anim = GetComponent<Animator>();
+		
+		if (!rb)
+			Debug.Log("Need Rigidbody2d on Character.");
+		if (!anim)
+			Debug.Log("Need Animator on Character.:");
+		
+		if (speed == 0)
+			Debug.Log("Change speed value to above 0 in inspector");
+		
+	}//end of Start()
+	
+	// Update is called once per frame
+	void Update () {
+		
+		isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.2f,isGroundLayer);
+		
+		anim.SetBool("Grounded", isGrounded);
+		
+		// jump if z was pressed
+		if (Input.GetKeyDown(KeyCode.Z) && isGrounded)
+		{
+			rb.AddForce(Vector2.up*jumpForce,ForceMode2D.Impulse);
+		}
+		
+		//spin jump if x was pressed
+		/*if (Input.GetKeyDown(KeyCode.X) && isGrounded)
+		{
+		
+			rb.AddForce(Vector2.up*jumpForce,ForceMode2D.Impulse);
+		}*/
+		
+		float moveValue = Input.GetAxisRaw ("Horizontal");
+		
+		Debug.Log(moveValue);
+		
+		rb.velocity = new Vector2(moveValue*speed, rb.velocity.y); //move value can be multiplied by a speed variable, to speed it up
+		
+		anim.SetFloat("Move", Mathf.Abs(moveValue));
+		
+		if ((moveValue > 0 && !isFacingRight) || (moveValue < 0 && isFacingRight))
+			flipCharacter();
+		
+		//camera movement 
+		//Camera.velocity = new Vector2(moveValue, 0);
+		
+	}//end of Update()
+	
+	void flipCharacter()
+	{
+		//Toggle variable
+		isFacingRight = !isFacingRight;
+		
+		//Make a copy of current character scale, it's Vector3 becuase in Unity scale has 3 coordinates, (x,y,z) therefore 3d vector
+		Vector3 scaleFactor = transform.localScale; 
+		
+		//flip horizontal scale, x is horizontal changes
+		scaleFactor.x *= -1; //Changes scale to (-1,1,1) since it interacts with x's scale
+		
+		//Updates scale of character
+		transform.localScale = scaleFactor; 
+		
+	}//End of FlipChar...
+	
+	//Causes Mario to die when falling off the map
+	void OnCollisionExit2D(Collision2D c)
+	{
+		if (c.gameObject.tag == "Death" || c.gameObject.tag == "Enemy")
+		{
+			Destroy(gameObject,1);
+		}
+		
+	}//End of OnColl...
+	
+	void OnTriggerEnter2D(Collider2D c)
+	{
+		Debug.Log(c.gameObject);
+		Debug.Log(c.gameObject.name);
+		Debug.Log(c.gameObject.tag);
+		
+		//Checks if a character hits a GameObject tagged as Collision (could also ask if (name === "1up"))
+		if (c.gameObject.tag == "Collectible")
+		{
+			//Destroys whatever has a collider and a trigger
+			Destroy(c.gameObject);
+		}
+		
+	}//End of OnTrigg...  
+	
+}//End of Class
