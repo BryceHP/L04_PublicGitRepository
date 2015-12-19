@@ -1,0 +1,591 @@
+using UnityEngine;
+using System.Collections;
+
+public class CharacterController_Movement : MonoBehaviour {
+	
+	Rigidbody2D rb;
+	
+	public float speed;
+	
+	//for jumping
+	public float jumpForce;
+	public bool isGrounded;
+	public LayerMask isGroundLayer;
+	public Transform groundCheck;
+	
+	//public bool isSlide=false;
+	
+	//public bool isFire=false;
+	
+	public Animator anim; //Calls the animator
+	
+	//for flipping character
+	public bool isFacingRight; 
+	
+	// Use this for initialization
+	void Start () {
+		
+		rb = GetComponent<Rigidbody2D>();
+		anim = GetComponent<Animator>();
+		
+		if (!rb)
+			Debug.Log("Need Rigidbody2d on Character.");
+		if (!anim)
+			Debug.Log("Need Animator on Character.:");
+		
+		if (speed == 0)
+			Debug.Log("Change speed value to above 0 in inspector");
+		
+	}//end of Start()
+	
+	// Update is called once per frame
+	void Update () {
+		
+		isGrounded = Physics2D.OverlapCircle(groundCheck.position, 0.2f,isGroundLayer);
+		
+		anim.SetBool("Grounded", isGrounded);
+		
+		// jump if z was pressed
+		if (Input.GetKeyDown(KeyCode.Z) && isGrounded)
+		{
+			rb.AddForce(Vector2.up*jumpForce,ForceMode2D.Impulse);
+		}
+		
+		//spin jump if x was pressed
+		/*if (Input.GetKeyDown(KeyCode.X) && isGrounded)
+		{
+		
+			rb.AddForce(Vector2.up*jumpForce,ForceMode2D.Impulse);
+		}*/
+		
+		float moveValue = Input.GetAxisRaw ("Horizontal");
+		
+		Debug.Log(moveValue);
+		
+		rb.velocity = new Vector2(moveValue*speed, rb.velocity.y); //move value can be multiplied by a speed variable, to speed it up
+		
+		anim.SetFloat("Move", Mathf.Abs(moveValue));
+		
+		if ((moveValue > 0 && !isFacingRight) || (moveValue < 0 && isFacingRight))
+			flipCharacter();
+		
+		//camera movement 
+		//Camera.velocity = new Vector2(moveValue, 0);
+		
+	}//end of Update()
+	
+	void flipCharacter()
+	{
+		//Toggle variable
+		isFacingRight = !isFacingRight;
+		
+		//Make a copy of current character scale, it's Vector3 becuase in Unity scale has 3 coordinates, (x,y,z) therefore 3d vector
+		Vector3 scaleFactor = transform.localScale; 
+		
+		//flip horizontal scale, x is horizontal changes
+		scaleFactor.x *= -1; //Changes scale to (-1,1,1) since it interacts with x's scale
+		
+		//Updates scale of character
+		transform.localScale = scaleFactor; 
+		
+	}//End of FlipChar...
+	
+	//Causes Mario to die when falling off the map
+	void OnCollisionExit2D(Collision2D c)
+	{
+		if (c.gameObject.tag == "Death" || c.gameObject.tag == "Enemy")
+		{
+			Destroy(gameObject,1);
+		}
+		
+	}//End of OnColl...
+	
+	void OnTriggerEnter2D(Collider2D c)
+	{
+		Debug.Log(c.gameObject);
+		Debug.Log(c.gameObject.name);
+		Debug.Log(c.gameObject.tag);
+		
+		//Checks if a character hits a GameObject tagged as Collision (could also ask if (name === "1up"))
+		if (c.gameObject.tag == "Collectible")
+		{
+			//Destroys whatever has a collider and a trigger
+			Destroy(c.gameObject);
+		}
+		
+	}//End of OnTrigg...  
+	
+}//End of Class
+
+using UnityEngine;
+using System.Collections;
+
+public class Level1 : MonoBehaviour {
+	
+	public GameObject player;
+	public GameObject[] enemyPrefabs;
+	public GameObject[] enemySpawnPoints;
+	public GameObject[] powerUpPrefabs;
+	public GameObject[] powerUpSpawnPoints;
+	public GameObject playerSpawnPoint;
+	
+	// Use this for initialization
+	void Start () {
+		enemySpawnPoints = GameObject.FindGameObjectsWithTag("Enemy_SpawnPoint");
+		powerUpSpawnPoints = GameObject.FindGameObjectsWithTag("PowerUp_SpawnPoint");
+		
+		Instantiate(player, playerSpawnPoint.transform.position, playerSpawnPoint.transform.rotation);
+		
+		for(int i = 0; i < enemySpawnPoints.Length; i++)
+		{
+			if(Random.Range(0,5) < 2.5f)
+				Instantiate(enemyPrefabs[0], enemySpawnPoints[i].transform.position, enemySpawnPoints[i].transform.rotation);
+			else
+				Instantiate(enemyPrefabs[1], enemySpawnPoints[i].transform.position, enemySpawnPoints[i].transform.rotation);
+		}
+		
+		
+		for (int i = 0; i < powerUpSpawnPoints.Length; i++)
+		{
+			if (Random.Range(0, 5) < 2.5f)
+				Instantiate(powerUpPrefabs[0], powerUpSpawnPoints[i].transform.position, powerUpSpawnPoints[i].transform.rotation);
+			else
+				Instantiate(powerUpPrefabs[1], powerUpSpawnPoints[i].transform.position, powerUpSpawnPoints[i].transform.rotation);
+		}
+		
+		//Call to GameManager Scipt
+		GameManager.instance.StartLevel();
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}
+}
+
+using UnityEngine;
+using System.Collections;
+using UnityEngine.UI;
+
+public class GameManager : MonoBehaviour {
+	
+	public GameObject foundLife;
+	//public GameObject foundHealth;    variable to store Health GameObject value
+	public int howManyLifes;
+	//public GameObject[] allLifes;
+	
+	public GameObject player;
+	public GameObject finishLine;
+	
+	//array of Objects
+	public GameObject[] spawnPoints;
+	
+	public GameObject[] allCollect;
+	
+	int chosenCollect;
+	
+	public Transform itemSpawnPoint;
+	
+	public GameObject life;
+	public GameObject health;
+	
+	static GameManager _instance = null;
+	
+	public Canvas titleCanvas;
+	public Canvas pauseCanvas;
+	public Canvas hudCanvas;
+	
+	public Button quitButton;
+	
+	public Text scoreText;
+	
+	int score;
+	
+	public Text lifeText;
+	
+	int lives=4;
+	
+	// Use this for initialization
+	void Start () 
+	{
+		
+		//If GameManager does not exist
+		if (!_instance)
+		{
+			//keeps game object alive in scene switch
+			DontDestroyOnLoad(gameObject);
+			
+			//Keeps a reference to Gameobject
+			_instance = this;
+			
+			quitButton.onClick.AddListener(QuitGame);
+		}
+		else 
+			Destroy(gameObject);
+		
+		titleCanvas.enabled = true;
+		pauseCanvas.enabled = false;
+		hudCanvas.enabled = false;
+		
+	}//END OF Start()
+	
+	// Update is called once per frame
+	void Update () {
+		
+		//check if enter was pressed
+		if (Input.GetKeyDown(KeyCode.Return))
+		{
+			//Switch the Scene to Game Scene
+			StartGame();
+		}
+		
+		//For going back to The Pause Menu
+		if (Input.GetKeyDown(KeyCode.Escape) && Application.loadedLevelName !="Screen_Title")
+		{
+			titleCanvas.enabled = false;
+			pauseCanvas.enabled = true;
+			hudCanvas.enabled = true;
+			Time.timeScale = 0;
+		}
+		
+		//For quitting the Game
+		if (Input.GetKeyDown(KeyCode.Escape) && Application.loadedLevelName == "Screen_Title")
+		{
+			QuitGame();
+		}
+		
+	}//END OF Update()
+	
+	public void StartLevel()
+	{
+		//Goes through hierarchy to find the name of an object
+		foundLife = GameObject.Find("1up");
+		
+		//searches for GameObject named "Health"
+		//foundHealth = GameObject.Find("Health");
+		
+		//Goes through hierarchy to find the tag of an object
+		foundLife = GameObject.FindWithTag("Collectible");
+		
+		//allLifes = GameObject.FindGameObjectsWithTag("Collectible");
+		howManyLifes = GameObject.FindGameObjectsWithTag("Collectible").Length;
+		
+		allCollect = GameObject.FindGameObjectsWithTag("Collectible");
+		
+		//fills spawnPoints array with GameObjects that have "Collectible"
+		spawnPoints = GameObject.FindGameObjectsWithTag("spawnPoints");
+		
+		for (int i = 0; i < spawnPoints.Length; i++)
+		{
+			chosenCollect = Random.Range(0, 10);
+			if (chosenCollect < 5)
+			{
+				spawnPoints[i] = allCollect[0];
+				allCollect[0].GetComponent<SpriteRenderer>().sortingLayerName = "Collectables";
+				
+				Instantiate(health, itemSpawnPoint.position, itemSpawnPoint.rotation);
+			}
+			else
+			{
+				spawnPoints[i] = allCollect[1];
+				allCollect[1].GetComponent<SpriteRenderer>().sortingLayerName = "Collectables";
+				
+				Instantiate(life, itemSpawnPoint.position, itemSpawnPoint.rotation);
+			}
+		}
+	}//End of StartLevel()
+	
+	void DistanceCheck()
+	{
+		//can be used not only to let you know when you are getting close to the finsish line, but it could also be used for enemy AI, attacking after a while, play music at a certain point, etc
+		float distanceToFinish = Vector2.Distance(player.transform.position, finishLine.transform.position);
+		Debug.Log("Distance Remaining: " + distanceToFinish);
+		
+	}
+	
+	public static GameManager instance
+	{
+		get {return _instance;}
+		set { _instance = value; }
+	}
+	
+	public void StartGame()
+	{
+		titleCanvas.enabled = false;
+		pauseCanvas.enabled = false;
+		hudCanvas.enabled = true;
+		
+		Application.LoadLevel("Level1");
+	}
+	
+	public void QuitGame()
+	{
+		Debug.Log("Quitting...");
+		Application.Quit();
+	}
+	
+	public void UpdateScore(int score)
+	{
+		//Change score by passed value
+		this.score += score;
+		
+		//Convert score variable to string and update UI.Text on screen
+		scoreText.text = this.score.ToString();
+	}
+	
+	public void UpdateLives(int lives)
+	{
+		//Change lives by passed value
+		this.lives -= lives;
+		
+		//Convert score variable to string and update UI.Text on screen
+		lifeText.text = this.lives.ToString();
+	}
+	
+	public void UnPauseGame()
+	{
+		titleCanvas.enabled = false;
+		pauseCanvas.enabled = false;
+		hudCanvas.enabled = true;
+		Time.timeScale = 1;
+		
+		//Application.LoadLevel("Level1");
+	}
+	
+}
+
+using UnityEngine;
+using System.Collections;
+
+public class ExtraLife : MonoBehaviour {
+	
+	int life=1;
+	
+	// Use this for initialization
+	void Start () {
+		
+	}//END OF Start()
+	
+	public int AddLife () {
+		
+		return life;
+		
+	}//END OF AddLife()
+}
+
+using UnityEngine;
+using System.Collections;
+
+public class RangedEnemy : MonoBehaviour {
+    public Projectile projectilePrefab; //Used to store image that'll be fired
+    public Transform projectileSpawnPoint; //Used to create a play the projectiles will come from
+    public float projectileSpeed; //Used to determine how fast projectile will travel
+
+    public bool isFacingRight;
+
+    public GameObject target;
+
+    //Time based firing variables
+    public float fireRate;
+    float timeSinceLastFire = 0;
+
+    //public int lives;
+
+    // Use this for initialization
+    void Start()
+    {
+
+        if (projectileSpeed == 0)
+            projectileSpeed = 1;
+
+        if (!target)
+            target = GameObject.FindWithTag("Player");
+
+        if (fireRate == 0)
+            fireRate = 1.0f;
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+        float distanceToTarget = Vector2.Distance(target.transform.position, projectileSpawnPoint.transform.position);
+        Debug.Log("Distance Remaining: " + distanceToTarget);
+
+        //Check if enough time has passed since projectile was last fired
+        if (Time.time > timeSinceLastFire + fireRate && distanceToTarget < 1.5) //Time passed has to be greater then the last time the projectile was fired + fire rate
+        {
+            //Create and fire projectile
+            fireProjectile();
+
+            //Timestamp when projectile was fired
+            timeSinceLastFire = Time.time;
+        }
+
+        //if (target.transform.position.x > projectileSpawnPoint.transform.position.x)
+       // {
+            if (!isFacingRight)
+            {
+                flip();
+            }
+       // }
+        //else if (target.transform.position.x <= projectileSpawnPoint.transform.position.x)
+        //{
+            if (isFacingRight)
+            {
+                flip();
+            }
+       // }
+
+    }//End of Update
+
+    void fireProjectile()
+    {
+        Projectile temp = Instantiate(projectilePrefab, projectileSpawnPoint.position, projectileSpawnPoint.rotation) as Projectile;
+
+        //shoots right when facing right
+        if (isFacingRight)
+            temp.GetComponent<Rigidbody2D>().velocity = new Vector2(projectileSpeed, 0);
+
+        //shoots left when facing left
+        else
+            temp.GetComponent<Rigidbody2D>().velocity = new Vector2(-projectileSpeed, 0);
+
+        //less if statements the better, can use else since there's only 2 directions
+        //else if (!isFacingRight)
+        //temp.GetComponent<Rigidbody2D>().velocity = new Vector2 (-ProjectileSpeed,0);
+    }
+
+    void flip()
+    {
+        //Toggle variable
+        isFacingRight = !isFacingRight;
+
+        //Make a copy of current character scale, it's Vector3 becuase in Unity scale has 3 coordinates, (x,y,z) therefore 3D vector
+        Vector3 scaleFactor = transform.localScale;
+
+        //flip horizontal scale, x is horizontal changes
+        scaleFactor.x *= -1; //Changes scale to (-1,1,1) since it interacts with x's scale
+
+        //Updates scale of character
+        transform.localScale = scaleFactor;
+    }
+    void OnCollisionEnter2D(Collision2D c)
+    {
+        /*if (c.gameObject.tag == "Enemy_FiveHit")
+        {
+            if (lives > 0)
+            {
+                lives--;
+                Debug.Log("Lives:" + lives);
+                Destroy(c.gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+                Destroy(c.gameObject);
+            }
+        }*/
+    }
+}
+
+using UnityEngine;
+using System.Collections;
+
+public class HorizontalMovementEnemy : MonoBehaviour {
+	
+	//Create instance variables for the Enemy, public for testing purposes
+	public int speed;
+	public bool isfacingRight;
+	
+	Rigidbody2D rb;
+	
+	// Use this for initialization
+	void Start () {
+		//Initialize instnace variabels
+		if (speed == 0)
+			speed = 2;
+		
+		//instead of lines 20-25, can use a requireComponent, so game won't start if there's no rigidBody
+		
+		//Keep a reference to Rigidbody2D Component, find Rigidbody2D component
+		rb = GetComponent<Rigidbody2D>();
+		
+		//Check to make sure Rigidbody2D Component is attached, if you can't find it, create one
+		if (!rb)
+			rb = gameObject.AddComponent<Rigidbody2D>(); 
+		
+		//make enemy move based on direction it's facing
+		if (isfacingRight)
+			rb.velocity = new Vector2(speed,0);
+		else
+			rb.velocity = new Vector2(-speed, 0);
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}//end of Update
+	
+	void OnCollisionEnter2D(Collision2D c)
+	{
+		//Flip the Enemy
+		flip();
+		
+		if (isfacingRight)
+			rb.velocity = new Vector2(speed, 0);
+		else
+			rb.velocity = new Vector2(-speed, 0);
+	}
+	
+	void flip()
+	{
+		//Toggle variable
+		isfacingRight = !isfacingRight;
+		
+		//Make a copy of current character scale, it's Vector3 becuase in Unity scale has 3 coordinates, (x,y,z) therefore 3d vector
+		Vector3 scaleFactor = transform.localScale;
+		
+		//flip horizontal scale, x is horizontal changes
+		scaleFactor.x *= -1; //Changes scale to (-1,1,1) since it interacts with x's scale
+		
+		//Updates scale of character
+		transform.localScale = scaleFactor;
+	}
+}
+
+using UnityEngine;
+using System.Collections;
+
+public class VerticalMovementEnemy : MonoBehaviour {
+
+	Rigidbody2D rb;
+	public float verticalHeight;
+
+	public bool isPiped;
+	public LayerMask isGroundLayer;
+	public Transform pipeCheck;
+
+	// Use this for initialization
+	void Start () {
+	
+		rb = GetComponent<Rigidbody2D>();
+
+		if (!rb)
+			Debug.Log("Need Rigidbody2d on Enemy.");
+
+	}//End of Start
+	
+	// Update is called once per frame
+	void Update () {
+
+		isPiped = Physics2D.OverlapCircle(pipeCheck.position, 0.2f,isGroundLayer);
+
+		if (isPiped)
+			rb.AddForce(Vector2.up*verticalHeight,ForceMode2D.Impulse);
+
+
+			rb.AddForce(Vector2.down*verticalHeight,ForceMode2D.Impulse);
+
+	}//End of Update
+}
