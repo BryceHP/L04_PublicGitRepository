@@ -1,0 +1,64 @@
+using UnityEngine;
+using System.Collections;
+
+public class HorizontalMovementEnemy : MonoBehaviour {
+	
+	//Create instance variables for the Enemy, public for testing purposes
+	public int speed;
+	public bool isfacingRight;
+	
+	Rigidbody2D rb;
+	
+	// Use this for initialization
+	void Start () {
+		//Initialize instnace variabels
+		if (speed == 0)
+			speed = 2;
+		
+		//instead of lines 20-25, can use a requireComponent, so game won't start if there's no rigidBody
+		
+		//Keep a reference to Rigidbody2D Component, find Rigidbody2D component
+		rb = GetComponent<Rigidbody2D>();
+		
+		//Check to make sure Rigidbody2D Component is attached, if you can't find it, create one
+		if (!rb)
+			rb = gameObject.AddComponent<Rigidbody2D>(); 
+		
+		//make enemy move based on direction it's facing
+		if (isfacingRight)
+			rb.velocity = new Vector2(speed,0);
+		else
+			rb.velocity = new Vector2(-speed, 0);
+	}
+	
+	// Update is called once per frame
+	void Update () {
+		
+	}//end of Update
+	
+	void OnCollisionEnter2D(Collision2D c)
+	{
+		//Flip the Enemy
+		flip();
+		
+		if (isfacingRight)
+			rb.velocity = new Vector2(speed, 0);
+		else
+			rb.velocity = new Vector2(-speed, 0);
+	}
+	
+	void flip()
+	{
+		//Toggle variable
+		isfacingRight = !isfacingRight;
+		
+		//Make a copy of current character scale, it's Vector3 becuase in Unity scale has 3 coordinates, (x,y,z) therefore 3d vector
+		Vector3 scaleFactor = transform.localScale;
+		
+		//flip horizontal scale, x is horizontal changes
+		scaleFactor.x *= -1; //Changes scale to (-1,1,1) since it interacts with x's scale
+		
+		//Updates scale of character
+		transform.localScale = scaleFactor;
+	}
+}
